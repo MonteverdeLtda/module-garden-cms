@@ -45,18 +45,6 @@
 			<div class="page-title">
 				<div class="title_left">
 					<h3>Listado</h3>
-					<p v-if="$route.params.letter_text != undefined">
-						Filtrando por letra: {{ $route.params.letter_text }}
-						<router-link :to="{ name: 'Garden-List' }" tag="a" class="btn btn-default btn-sm">
-							Borrar filtro
-						</router-link>
-					</p>
-					<p v-else-if="$route.params.search_text != undefined">
-						Buscando: {{ $route.params.search_text }}
-						<router-link :to="{ name: 'Garden-List' }" tag="a" class="btn btn-default btn-sm">
-							Borrar filtro
-						</router-link>
-					</p>
 				</div>
 
 				<div class="title_right">
@@ -82,6 +70,26 @@
 											<a>{{ letter.toUpperCase() }}</a>
 										</router-link>
 									</ul>
+								</div>
+								<div class="col-md-12 col-sm-12 col-xs-12 text-center">
+									<p v-if="$route.params.letter_text != undefined">
+										Filtrando por letra: {{ $route.params.letter_text }}
+										<router-link :to="{ name: 'Garden-List' }" tag="a" class="btn btn-default btn-sm">
+											Borrar filtro
+										</router-link>
+									</p>
+									<p v-else-if="$route.params.search_text != undefined">
+										Buscando: {{ $route.params.search_text }}
+										<router-link :to="{ name: 'Garden-List' }" tag="a" class="btn btn-default btn-sm">
+											Borrar filtro
+										</router-link>
+									</p>
+									<p v-else-if="$route.params.value_text != undefined">
+										Filtrando por campo: {{ $route.params.value_text }}
+										<router-link :to="{ name: 'Garden-List' }" tag="a" class="btn btn-default btn-sm">
+											Borrar filtro
+										</router-link>
+									</p>
 								</div>
 								<div class="clearfix"></div>
 								
@@ -115,6 +123,9 @@
 														<a href="#"><span class="fa fa-star-o"></span></a>
 													</p>
 													-->
+													<button @click="deleteGarden(record.id)" type="button" class="btn btn-danger btn-sm">
+														<i class="fa fa-times"></i>
+													</button>
 												</div>
 												<div class="col-xs-12 col-sm-6 emphasis">
 													<router-link :to="{ name: 'Garden-Edit', params: { garden_id: record.id }}" tag="button" type="button" class="btn btn-success btn-sm">
@@ -123,9 +134,6 @@
 													<router-link :to="{ name: 'Garden-Details', params: { garden_id: record.id }}" tag="button" type="button" class="btn btn-primary btn-sm">
 														<i class="fa fa-eye"></i>
 													</router-link>
-													<button @click="deleteGarden(record.id)" type="button" class="btn btn-danger btn-sm">
-														<i class="fa fa-times"></i>
-													</button>
 												</div>
 											</div>
 										</div>
@@ -187,16 +195,38 @@
 									<template v-else>
 										<template v-for="(item) in fields">
 											<template v-if="item.type === 'text'">
-												<table class="table table-responsive">
-													<tr>
-														<th>{{ item.name }}</th>
-														<td>
-															<ul>
-																<li v-for="val in item.values">{{ val.value }}</li>
-															</ul>
-														</td>
-													</tr>
-												</table>
+											  <div class="">
+												<h2>{{ item.name }} <small> ({{ item.values.length }})</small></h2>
+												
+												<ul class="list-inline prod_size">
+													<!-- //<li><button type="button" class="btn btn-default btn-xs" v-for="val in item.values">{{ val.value }}</button></li>-->
+													
+													<router-link :to="{ name: 'Garden-Filter-Fields', params: { value_text: val.value }}" tag="li" :key="val.id" v-for="val in item.values">
+														<button type="button" class="btn btn-default btn-xs">{{ val.value.charAt(0).toUpperCase() + val.value.slice(1) }}</button>
+													</router-link>
+												</ul>
+												<!-- //
+												<template v-if="item.values.length === 1">
+													<table class="table table-responsive">
+														<tr>
+															<th>{{ item.name }}</th>
+															<td>
+																<ul>
+																	<li v-for="val in item.values">{{ val.value }}</li>
+																</ul>
+															</td>
+														</tr>
+													</table>
+												</template>
+												<template v-else>
+													<ul class="list-inline prod_size">
+														<li><button type="button" class="btn btn-default btn-xs" v-for="val in item.values">{{ val.value }}</button></li>
+													</ul>
+												</template>
+												-->
+											  </div>
+											  <!-- //
+												-->
 												<br />
 											</template>
 											<template v-else-if="item.type === 'color'">
@@ -258,7 +288,6 @@
 						</div>
 					</div>
 				</div>
-			
 			</template>
 		</div>
 	</div>
@@ -558,6 +587,7 @@
 								<table class="table table-responsive">
 									<tr v-for="(item, i) in fields_items">
 										<td>{{ item.id }}</td>
+										<td>{{ item.field.name }}</td>
 										<td>
 											<template class="legend list-unstyled" v-if="item.field.type === 'color'">
 												<ul class="legend list-unstyled">
@@ -657,6 +687,7 @@ var GardenList = Vue.extend({
 			load: null,
 			records: null,
 			searchText: null,
+			gardens_ids: [],
 			letters_list: ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','ñ','o','p','q','r','s','t','u','v','w','x','y','z',],
 		};
 	},
@@ -674,52 +705,147 @@ var GardenList = Vue.extend({
 		},
 		getGardens(){
 			var self = this;
-			self.load = {
-				params: {
-					join: [
-						'garden_comun_names',
-					],
-				}
-			};
+			
 			if(self.$route.params.letter_text != undefined){
-				console.log("Filtrando por letra.");
-				self.load = {
+				// console.log("Filtrando por letra.");
+				self.gardens_ids = [];
+				
+				api.get('/records/garden_comun_names', {
 					params: {
-						join: [
-							'garden_comun_names',
-						],
-						'filter1': [
-							'name_comercial,sw,' + self.$route.params.letter_text,
-						],
-						'filter2': [
-							'name_comun,sw,' + self.$route.params.letter_text,
-						],
-						'filter3': [
-							'name_botanico,sw,' + self.$route.params.letter_text,
-						],
+						filter: [
+							'name,cs,' + self.$route.params.letter_text
+						]
 					}
-				};
+				})
+				.then(function (r_garden_comun_names) {
+					if(r_garden_comun_names.data.records){
+						r_garden_comun_names.data.records.forEach(aa => {
+							self.gardens_ids.push(aa.garden);
+						});
+						self.load = {
+							params: {
+								join: [
+									'garden_comun_names',
+								],
+								'filter1': [
+									'name_comercial,sw,' + self.$route.params.letter_text,
+								],
+								'filter2': [
+									'name_comun,sw,' + self.$route.params.letter_text,
+								],
+								'filter3': [
+									'name_botanico,sw,' + self.$route.params.letter_text,
+								],
+								'filter4': [
+									'id,in,' + self.gardens_ids.join(),
+								],
+							}
+						};
+						self.loadList();
+					}
+				}).catch(function (error) {
+					// console.log('error', error, error.response);
+					
+				});
 			}else if(self.$route.params.search_text != undefined){
-				console.log("Filtrando por search.");
-				self.load = {
+				// console.log("Filtrando por search.");
+				self.gardens_ids = [];
+				
+				api.get('/records/garden_comun_names', {
 					params: {
-						join: [
-							'garden_comun_names',
-						],
-						'filter1': [
-							'name_comercial,cs,' + self.$route.params.search_text,
-						],
-						'filter2': [
-							'name_comun,cs,' + self.$route.params.search_text,
-						],
-						'filter3': [
-							'name_botanico,cs,' + self.$route.params.search_text,
-						],
-						'filter4': [
-							'description,cs,' + self.$route.params.search_text,
-						],
+						filter: [
+							'name,cs,' + self.$route.params.search_text
+						]
 					}
-				};
+				})
+				.then(function (r_garden_comun_names) {
+					if(r_garden_comun_names.data.records){
+						r_garden_comun_names.data.records.forEach(aa => {
+							self.gardens_ids.push(aa.garden);
+						});
+						
+						api.get('/records/garden_items', {
+							params: {
+								filter: [
+									'value,cs,' + self.$route.params.search_text
+								]
+							}
+						})
+						.then(function (r_garden_items) {
+							if(r_garden_items.data.records){
+								r_garden_items.data.records.forEach(aa => {
+									self.gardens_ids.push(aa.garden);
+								});
+								
+								self.load = {
+									params: {
+										join: [
+											'garden_comun_names',
+										],
+										'filter1': [
+											'name_comercial,cs,' + self.$route.params.search_text,
+										],
+										'filter2': [
+											'name_comun,cs,' + self.$route.params.search_text,
+										],
+										'filter3': [
+											'name_botanico,cs,' + self.$route.params.search_text,
+										],
+										'filter4': [
+											'description,cs,' + self.$route.params.search_text,
+										],
+										'filter5': [
+											'id,in,' + self.gardens_ids.join(),
+										],
+									}
+								};
+								// console.log(self.load);
+								
+								self.loadList();
+							}
+						}).catch(function (error) {
+							// console.log('error', error, error.response);
+							
+						});
+					}
+				}).catch(function (error) {
+					// console.log('error', error, error.response);
+					
+				});
+			}else if(self.$route.params.value_text != undefined){
+				// console.log("Filtrando por Fields.");
+				// console.log(self.$route.params.value_text);
+				
+				api.get('/records/garden_items', {
+					params: {
+						filter: [
+							'value,cs,' + self.$route.params.value_text
+						]
+					}
+				})
+				.then(function (rr) {
+					if(rr.data.records){
+						bb = [];
+						rr.data.records.forEach(aa => {
+							bb.push(aa.garden);
+						});
+						self.load = {
+							params: {
+								join: [
+									'garden_comun_names',
+								],
+								'filter1': [
+									'id,in,' + bb.join(),
+								],
+							}
+						};
+						
+						self.loadList();
+					}
+				}).catch(function (error) {
+					// console.log('error', error, error.response);
+					
+				});
 			}else{
 				self.load = {
 					params: {
@@ -728,17 +854,20 @@ var GardenList = Vue.extend({
 						],
 					}
 				};
+				self.loadList();
 			}
 			
+		},
+		loadList(){
+			var self = this;
 			if(self.load !== null){
 				api.get('/records/garden', self.load)
 				.then(function (response) {
 					self.records = response.data.records;
 				}).catch(function (error) {
-					console.log('error', error, error.response)
+					// console.log('error', error, error.response)
 				});
 			}
-			
 		},
 		deleteGarden(garden_id){
 			var self = this;
@@ -746,10 +875,10 @@ var GardenList = Vue.extend({
 				message: "Debes confirmar antes de eliminar, al eliminar se eliminan tambien las imagenes y atributos.",
 				locale: 'es',
 				callback: function (result) {
-					console.log('This was logged in the callback: ' + result);
+					// console.log('This was logged in the callback: ' + result);
 					if(result === true){
 						api.delete('/records/garden/' + garden_id, {}).then(function (response) {
-							 console.log(response);
+							 // console.log(response);
 							 self.getGardens();
 						}).catch(function (error) {
 							// console.log(error);// console.log(error.response);
@@ -795,7 +924,7 @@ var GardenDetails = Vue.extend({
 				return b;
 			}
 			catch (e){
-				console.error(e);
+				// console.error(e);
 				return null;
 			}
 		}
@@ -866,15 +995,15 @@ var GardenEdit = Vue.extend({
 		},
 		onFinishCallback(){
 			var self = this;
-			console.log("Validando Formulario");
+			// console.log("Validando Formulario");
 			if(self.validateAllSteps()){
-				console.log("Formulario OK.");
+				// console.log("Formulario OK.");
 				router.push({ name: 'Garden-Details', params: { garden_id: self.record.id } })
 			}
 		},
 		onLeaveStep(obj, context){
 			var self = this;
-			console.log("Leaving step " + context.fromStep + " to go to step " + context.toStep);
+			// console.log("Leaving step " + context.fromStep + " to go to step " + context.toStep);
 			// return (context.toStep < context.fromStep) ? true : self.validateSteps(context.fromStep);
 			return self.validateSteps(context.fromStep);
 		},
@@ -885,46 +1014,46 @@ var GardenEdit = Vue.extend({
 			document.documentElement.scrollTop = 0;
 			
 			if(stepnumber == 1){
-				console.log("Creacion del garden.");
+				// console.log("Creacion del garden.");
 				
 				if (self.record.name_comercial != "" && self.record.name_comercial.length > 1){
 					if (self.record.id === null){
-						console.log("Creando");
+						// console.log("Creando");
 						api.post('/records/garden', self.record)
 							.then(function (r) {
 								if(r.status === 200 && r.data > 0){
-									console.log("Creado!!");
+									// console.log("Creado!!");
 									self.record.id = r.data;
 									jQuery('#wizard_verticle').smartWizard('goForward');
 									isStepValid = true;
 									return true;
 									// 
 								}else{
-									console.error(r);
+									// console.error(r);
 									isStepValid = false;
 									return false;
 								}
 							})
 							.catch(function (error) {
 								// console.log(error);
-								console.error(error);
+								// console.error(error);
 								// console.log(error.response);
 								// console.log(JSON.parse(error.response.config.data));
-								console.log((error.response.headers['x-exception-name']));
-								console.log((error.response.headers['x-exception-message']));
+								// console.log((error.response.headers['x-exception-name']));
+								// console.log((error.response.headers['x-exception-message']));
 								isStepValid = false;
 								return false;
 							});
 					} else {
-						console.log("Editando");
+						// console.log("Editando");
 						api.put('/records/garden/' + self.record.id, self.record)
 							.then(function (r) {
-								console.log(r);
+								// console.log(r);
 							})
 							.catch(function (error) {
-								console.error(error);
-								console.log((error.response.headers['x-exception-name']));
-								console.log((error.response.headers['x-exception-message']));
+								// console.error(error);
+								// console.log((error.response.headers['x-exception-name']));
+								// console.log((error.response.headers['x-exception-message']));
 							});
 						return true;
 					}
@@ -951,14 +1080,14 @@ var GardenEdit = Vue.extend({
 		},
 		addItemFieldSug(sug_id){
 			var self = this;
-			console.log(sug_id);
-			console.log(self.optionsAlt[sug_id]);
+			// console.log(sug_id);
+			// console.log(self.optionsAlt[sug_id]);
 			if(self.optionsAlt[sug_id]){
-				console.log('self.optionsAlt[sug_id]');
-				console.log(sug_id, self.optionsAlt[sug_id]);
+				// console.log('self.optionsAlt[sug_id]');
+				// console.log(sug_id, self.optionsAlt[sug_id]);
 				value = (self.optionsAlt[sug_id].value) ? self.optionsAlt[sug_id].value : '';
 				field = (self.optionsAlt[sug_id].field.id) ? self.optionsAlt[sug_id].field.id : '';
-				console.log(value, field);
+				// console.log(value, field);
 				
 				self.fieldText = value;
 				self.addItemField();
@@ -967,7 +1096,7 @@ var GardenEdit = Vue.extend({
 		removeNameComun(comun_name_id){
 			var self = this;
 			api.delete('/records/garden_comun_names/' + comun_name_id, {}).then(function (response) {
-				 console.log(response);
+				 // console.log(response);
 				 self.getNamesComunes();
 			}).catch(function (error) {
 				// console.log(error);// console.log(error.response);
@@ -984,7 +1113,7 @@ var GardenEdit = Vue.extend({
 					]
 				}
 			}).then(function (response) {
-				 console.log(response);
+				 // console.log(response);
 				self.garden_comun_names = (!response.data.garden_comun_names) ? [] : response.data.garden_comun_names;
 			}).catch(function (error) {
 			  // console.log(error);// console.log(error.response);
@@ -1243,7 +1372,7 @@ var GardenEdit = Vue.extend({
 								})
 								.catch(function (error) {
 									// console.log(error);
-									console.error(error);
+									// console.error(error);
 									// console.log(error.response);
 									// console.log(JSON.parse(error.response.config.data));
 									// console.log((error.response.headers['x-exception-name']));
@@ -1354,7 +1483,7 @@ var GardenEdit = Vue.extend({
 								})
 								.catch(function (error) {
 									// console.log(error);
-									console.error(error);
+									// console.error(error);
 									// console.log(error.response);
 									// console.log(JSON.parse(error.response.config.data));
 									// console.log((error.response.headers['x-exception-name']));
@@ -1416,18 +1545,18 @@ var GardenEdit = Vue.extend({
 		},
 		addItemField(){
 			var self = this;
-			console.log('addItemField')
-			console.log(self.fieldText)
-			console.log(self.fieldSelected)
+			// console.log('addItemField')
+			// console.log(self.fieldText)
+			// console.log(self.fieldSelected)
 			if(self.fieldText != "" && self.fields_form[self.fieldSelected].id > 0){
 				api.post('/records/garden_items', {
 					garden: self.record.id,
 					field: self.fields_form[self.fieldSelected].id,
 					value: self.fieldText
 				}).then(function (response) {
-					console.log(response)
+					// console.log(response)
 					self.getFields();
-					self.fieldSelected = 0;
+					//self.fieldSelected = 0;
 					self.fieldText = '';
 				}).catch(function (error) {
 				  // console.log(error);// console.log(error.response);
@@ -1436,7 +1565,7 @@ var GardenEdit = Vue.extend({
 		},
 		getFields(){
 			var self = this;
-			console.log('getFields')
+			// console.log('getFields')
 			
 			api.get('/records/garden_items', {
 				params: {
@@ -1448,7 +1577,7 @@ var GardenEdit = Vue.extend({
 					]
 				}
 			}).then(function (response) {
-				 console.log(response);
+				 // console.log(response);
 				self.fields_items = (!response.data.records) ? [] : response.data.records;
 				
 			}).catch(function (error) {
@@ -1457,12 +1586,12 @@ var GardenEdit = Vue.extend({
 		},
 		getRecord(){
 			var self = this;
-			console.log('getRecord')			
+			// console.log('getRecord')			
 			api.get('/records/garden/' + self.getGardenId(), {
 				params: {
 				}
 			}).then(function (response) {
-				console.log(response);
+				// console.log(response);
 				if (response.data.id != undefined && response.data.id > 0){
 					self.record = response.data;
 					self.getNamesComunes();
@@ -1485,13 +1614,13 @@ var GardenEdit = Vue.extend({
 					]
 				}
 			}).then(function (response) {
-				console.log(response);
+				// console.log(response);
 				if (response.data.records != undefined){
 					response.data.records.forEach(a => {
-						console.log('a', a);
+						// console.log('a', a);
 						found = self.optionsAlt.filter(x => x.value === a.value);
-						console.log('a', a);
-						console.log('found', found);
+						// console.log('a', a);
+						// console.log('found', found);
 						
 						if(found.length === 0){
 							self.optionsAlt.push(a);
@@ -1513,6 +1642,7 @@ var router = new VueRouter({
     { path: '/', component: GardenList, name: 'Garden-List' },
     { path: '/filter/letter/:letter_text', component: GardenList, name: 'Garden-Filter-Letter' },
     { path: '/search/:search_text', component: GardenList, name: 'Garden-Search' },
+    { path: '/filter/fields/search/:value_text', component: GardenList, name: 'Garden-Filter-Fields' },
     { path: '/create', component: GardenEdit, name: 'Garden-Create', params: { garden_id: 0 } },
     { path: '/edit/:garden_id', component: GardenEdit, name: 'Garden-Edit'},
     { path: '/details/:garden_id', component: GardenDetails, name: 'Garden-Details'},
