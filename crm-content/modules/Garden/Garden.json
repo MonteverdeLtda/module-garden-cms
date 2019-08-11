@@ -1,0 +1,25 @@
+{
+	"name": "Biblioteca",
+	"isActive": true,
+	"author": "FelipheGomez - Andres Felipe Gomez Maya",
+	"icon": "fa fa-book",
+	"showTitleModule": false,
+	"sections": [
+		{
+			"title": "Libro Verde",
+			"controller": "Garden",
+			"action": "index",
+			"icon": "fa fa-leaf",
+			"tree": [
+			]
+		},
+		{
+			"title": "Atributos",
+			"controller": "Garden",
+			"action": "garden_fields",
+			"icon": "fa fa-cogs",
+			"tree": [
+			]
+		}
+	]
+}
