@@ -235,7 +235,9 @@
 													<ul class="list-inline prod_color">
 														<li v-for="val in item.values">
 															<p>{{ val.value }}</p>
-															<div class="color bg-" :style="'background: ' + val.value + '!important;'"></div>
+															
+															<router-link :to="{ name: 'Garden-Filter-Fields', params: { value_text: val.value }}" tag="div" :key="val.id" class="color bg-" :style="'background: ' + val.value + '!important;cursor:pointer;'">
+															</router-link>
 														</li>
 													</ul>
 													<br />
